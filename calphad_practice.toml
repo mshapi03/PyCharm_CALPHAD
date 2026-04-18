@@ -1,0 +1,9 @@
+[PyCharm_CALPHAD]
+name = "CALPHAD Practice"
+version = "0.1.0"
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "pycalphad",
+]
