@@ -6,7 +6,7 @@ _Date Started: April 17, 2026_
 This repository contains python scripts designed to familiarize users with the pychalphad package, a Python library for 
 computation thermodynamics using the CALPHAD method. Official information from the developer team can be found here: 
 https://pycalphad.org/docs/latest/index.html. The author and contributors to this repository do not claim ownership of
-this packages nor have contributed to it, but using this for graduate coursework. 
+this packages nor have contributed to it. We are simply using this for graduate coursework and for educational purposes. 
 
 ### File Structure
 
