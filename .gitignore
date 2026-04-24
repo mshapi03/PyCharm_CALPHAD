@@ -1,0 +1,6 @@
+# created by virtualenv automatically, modified by Mitch S-A
+.venv/
+.idea/
+__pychache__/
+*.pyc
+binary_diagram.jpg

@@ -5,11 +5,18 @@
 # _________ Imports _________
 print("Beginning code...")
 
+# Handling file imports
 from pathlib import Path
+# For graphing
 import matplotlib.pyplot as plt
+# Main package to be used
 from pycalphad import Database, binplot
 import pycalphad.variables as v # Import specific submodules as needed
+# To remove distracting warning messages; see note below
 import warnings
+# To allow for timing functions/processes
+import time
+import threading
 
 print("Imports successful.")
 
@@ -22,6 +29,29 @@ warnings.filterwarnings("ignore", message=".*no corresponding TYPE_DEFINITION li
 
 # _________ Functions _________
 print("Writing functions...")
+
+# Write a function that can run and periodically print a message to show users the code is not frozen
+def status_update(stop_event, interval=5):
+    start_time = time.time()
+    while not stop_event.is_set():
+        time.sleep(interval)
+        if not stop_event.is_set():
+            elapsed = time.time() - start_time
+            print(f"... still cooking over here: ({elapsed:.0f}s elapsed) ...")
+
+# This is called by adding the following "wrapper" to any function:
+
+# start_time = time.time()
+# print("Start message")
+# stop_heartbeat = threading.Event()
+# heartbeat_thread = threading.Thread(target=print_status, args=(stop_heartbeat, 5)) # Prints every 5s
+# heartbeat_thread.start()
+# \\\ Entire function in a "try:" block \\\
+# finally:
+#   stop_heartbeat.set()
+#   heartbeat_thread.join()
+#   end_time = time.time()
+#   print("End message.")
 
 # Write a function to retrieve the .tbd file from the subdirectory
 def retrieve_tdb(file_name):
