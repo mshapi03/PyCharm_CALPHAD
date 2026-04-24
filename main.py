@@ -8,9 +8,10 @@ print("Beginning code...")
 # Handling file imports
 from pathlib import Path
 # For graphing
+import numpy as np
 import matplotlib.pyplot as plt
 # Main package to be used
-from pycalphad import Database, binplot
+from pycalphad import Database, binplot, ternplot
 import pycalphad.variables as v # Import specific submodules as needed
 # To remove distracting warning messages; see note below
 import warnings
@@ -102,7 +103,7 @@ def orient_database(dbf, sum_length="Full"):
     # Neatly format the end of the output
     print(f"\n{'=' * 60}")
 
-# Write a function to plot a binary phase diagram given a retrieved_tdb object, components, and a temperature range;
+# Write a function to plot a binary phase diagram given a retrieved_tdb object, components, and physical conditions:
 # Ex: components = ["AL", "NI", "VA"], x_component = "AL"
 def plot_binary_diagram(dbf, components, x_component, x_step_range=(0, 1, 0.05), phases=None, moles=1, p_pa=101325, temp_range=(300, 2000, 10), save=False):
     print("Graphing...")
@@ -122,6 +123,41 @@ def plot_binary_diagram(dbf, components, x_component, x_step_range=(0, 1, 0.05),
         print("Binary phase diagram saved as binary_diagram.jpg.")
     plt.show()
 
+# Write a function to plot a ternary phase diagram given a retrieved_tdb object, components, and physical conditions:
+def plot_ternary_diagram(dbf, step_range=(0, 1, 0.05), temp=1000, phases=None, p_pa=101325, save=False):
+    print("Graphing...")
+    # Get the pure elements for labels
+    pure_elements = [str(e) for e in dbf.elements if str(e) not in ['VA', '/-', 'ELECTRON_GAS']]
+    pure_elements.sort() # Ensures consistent ordering
+    x_comp, y_comp, z_comp = pure_elements # Unpack the remaining three into your variables
+    # Define the full backend components list for the solver (Must include "VA")
+    solver_components = pure_elements + ['VA']
+    if phases is None:
+        phases = [p for p in dbf.phases.keys() if p != "NEWSIGMA"]
+    # If phases are not provided, gets all possible phases programmatically with minor type error handling
+    if phases is None or not isinstance(phases, list):
+        phases = list(dbf.phases.keys())
+        if "NEWSIGMA" in phases: phases.remove("NEWSIGMA") # Removes problematic NEWSIGMA phase from old TDB file
+    # Create axes object using pycalphad built-in ternplot
+    ax = ternplot(dbf, solver_components, phases, {v.T: temp, v.P: p_pa, v.X(x_comp): step_range, v.X(y_comp): step_range},
+                  plot_kwargs={"tielines": True, "label_ranges": True}) # Keeps ugly "shading" in graph region
+    # Add some flashy formatting for the graph
+    ax.set_title(f"Ternary Phase Diagram: {'-'.join(pure_elements)} at {temp} K", fontsize=14, pad=20)
+    # ternplot doesn't like generating three axes, so we do it manually; first, clear default labels
+    ax.set_xlabel('')
+    ax.set_ylabel('')
+    # Now generate labels on all three axes; ha='right' and va='top' helps nudge the text so it doesn't overlap the lines
+    ax.text(-0.02, -0.02, z_comp, fontsize=12, fontweight='bold', ha='right', va='top')  # Bottom-Left
+    ax.text(1.02, -0.02, x_comp, fontsize=12, fontweight='bold', ha='left', va='top')  # Bottom-Right
+    ax.text(0, 1.02, y_comp, fontsize=12, fontweight='bold', ha='center', va='bottom')  # Top
+    # Add legend
+    ax.legend(loc='center left', bbox_to_anchor=(1.15, 0.5), title="Phases", frameon=True)
+    # Add saving capabilities
+    if save:
+        plt.savefig("ternary_diagram.jpg", format="jpg", dpi=300, bbox_inches="tight")
+        print("Ternary phase diagram saved as ternary_diagram.jpg.")
+    plt.show()
+
 print("Functions written.")
 
 # _________ Main Code _________
@@ -131,11 +167,12 @@ db_current = Database(retrieve_tdb("Al_Cr_Ni_Dupin_2001_TDB.TDB")) # Creates a D
 
 # Use orientation function to describe the database object and data contained therein.
 # orient_database(db_current, sum_length != "Full") # Calls shorter version of summary
-orient_database(db_current) # Calls full summary
+orient_database(db_current, sum_length="Short") # Calls full summary
 
 # Use binary phase diagram function; uncomment TWO lines below
 # binary_components = ["AL", "NI", "VA"] # Define the components
-# plot_binary_diagram(db_current, binary_components, "AL", save=True )
+# plot_binary_diagram(db_current, binary_components, "AL", save=True)
 
-# Use ternary phase diagram function; uncomment _ lines below
-
+# Use ternary phase diagram function; uncomment TWO lines below
+ternary_phases = ['LIQUID', 'FCC_A1', 'BCC_A2', 'SIGMA']
+plot_ternary_diagram(db_current, phases=ternary_phases, temp=1200, save=False)
