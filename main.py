@@ -8,7 +8,6 @@ print("Beginning code...")
 # Handling file imports
 from pathlib import Path
 # For graphing
-import numpy as np
 import matplotlib.pyplot as plt
 # Main package to be used
 from pycalphad import Database, binplot, ternplot
@@ -141,17 +140,8 @@ def plot_ternary_diagram(dbf, step_range=(0, 1, 0.05), temp=1000, phases=None, p
     # Create axes object using pycalphad built-in ternplot
     ax = ternplot(dbf, solver_components, phases, {v.T: temp, v.P: p_pa, v.X(x_comp): step_range, v.X(y_comp): step_range},
                   plot_kwargs={"tielines": True, "label_ranges": True}) # Keeps ugly "shading" in graph region
-    # Add some flashy formatting for the graph
+    # Add some formatting for the graph
     ax.set_title(f"Ternary Phase Diagram: {'-'.join(pure_elements)} at {temp} K", fontsize=14, pad=20)
-    # ternplot doesn't like generating three axes, so we do it manually; first, clear default labels
-    ax.set_xlabel('')
-    ax.set_ylabel('')
-    # Now generate labels on all three axes; ha='right' and va='top' helps nudge the text so it doesn't overlap the lines
-    ax.text(-0.02, -0.02, z_comp, fontsize=12, fontweight='bold', ha='right', va='top')  # Bottom-Left
-    ax.text(1.02, -0.02, x_comp, fontsize=12, fontweight='bold', ha='left', va='top')  # Bottom-Right
-    ax.text(0, 1.02, y_comp, fontsize=12, fontweight='bold', ha='center', va='bottom')  # Top
-    # Add legend
-    ax.legend(loc='center left', bbox_to_anchor=(1.15, 0.5), title="Phases", frameon=True)
     # Add saving capabilities
     if save:
         plt.savefig("ternary_diagram.jpg", format="jpg", dpi=300, bbox_inches="tight")
@@ -170,9 +160,9 @@ db_current = Database(retrieve_tdb("Al_Cr_Ni_Dupin_2001_TDB.TDB")) # Creates a D
 orient_database(db_current, sum_length="Short") # Calls full summary
 
 # Use binary phase diagram function; uncomment TWO lines below
-# binary_components = ["AL", "NI", "VA"] # Define the components
+binary_components = ["AL", "NI", "VA"] # Define the components
 # plot_binary_diagram(db_current, binary_components, "AL", save=True)
 
 # Use ternary phase diagram function; uncomment TWO lines below
 ternary_phases = ['LIQUID', 'FCC_A1', 'BCC_A2', 'SIGMA']
-plot_ternary_diagram(db_current, phases=ternary_phases, temp=1200, save=False)
+plot_ternary_diagram(db_current, temp=1500, save=True) # Current call calculates all phases at 1500
