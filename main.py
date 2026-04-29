@@ -151,18 +151,24 @@ def plot_ternary_diagram(dbf, step_range=(0, 1, 0.05), temp=1000, phases=None, p
 print("Functions written.")
 
 # _________ Main Code _________
+# Delete all # RUN:" comments to show full capabilities!
 
-# Use the retrieve_tdb function to read in the Al Li Zn database file
-db_current = Database(retrieve_tdb("Al_Cr_Ni_Dupin_2001_TDB.TDB")) # Creates a Database object
+### Use the retrieve_tdb function to read in the Al Li Zn database file
+# RUN: db_demo = Database(retrieve_tdb("Al_Cr_Ni_Dupin_2001_TDB.TDB")) # Creates a Database object
 
 # Use orientation function to describe the database object and data contained therein.
-# orient_database(db_current, sum_length != "Full") # Calls shorter version of summary
-orient_database(db_current, sum_length="Short") # Calls full summary
+# RUN: orient_database(db_demo) # Calls shorter version of summary
+# RUN: orient_database(db_demo, sum_length="Short") # Calls full summary
 
 # Use binary phase diagram function; uncomment TWO lines below
-binary_components = ["AL", "NI", "VA"] # Define the components
-# plot_binary_diagram(db_current, binary_components, "AL", save=True)
+# RUN: binary_components = ["AL", "NI", "VA"] # Define the components
+# RUN: plot_binary_diagram(db_demo, binary_components, "AL", save=True)
 
 # Use ternary phase diagram function; uncomment TWO lines below
-ternary_phases = ['LIQUID', 'FCC_A1', 'BCC_A2', 'SIGMA']
-plot_ternary_diagram(db_current, temp=1500, save=True) # Current call calculates all phases at 1500
+# RUN: ternary_phases = ['LIQUID', 'FCC_A1', 'BCC_A2', 'SIGMA']
+# RUN: plot_ternary_diagram(db_demo, temp=1500, save=True) # Current call calculates all phases at 1500
+
+# _________ Mitch's Code: Doped Refractories for EBCs _________
+# Use "mmc2.TDB
+# Consult: https://www.sciencedirect.com/science/article/pii/S0364591613001065?via%3Dihub
+# Use this as opportunity to understand relevant .tdb file
