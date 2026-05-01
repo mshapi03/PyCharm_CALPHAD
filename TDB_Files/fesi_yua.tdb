@@ -1,0 +1,171 @@
+$ Fe-Si
+$ TDB-file for the thermodynamic assessment of the Fe-Si system
+$
+$-----------------------------------------------------------------------------
+$ 2016.2.2
+$ 
+$ TDB file created by T.Abe, T.Bolotova
+$
+$ Particle Simulation and Thermodynamics Group, National Institute for 
+$ Materials Science. 1-2-1 Sengen, Tsukuba, Ibaraki 305-0047, Japan
+$ e-mail: abe.taichi(=)nims.go.jp (=)=@
+$ Copyright (C) NIMS 2016
+$
+$-----------------------------------------------------------------------------
+$ PARAMETERS ARE TAKEN FROM
+$ The re-assessment of the Mg-Zn and Fe-Si systems and their incorporation
+$ in thermodynamic descriptions of the Al-Mg-Zn and Fe-Si-Zn systems,
+$ Y.Yuan, F.Pan, D.Li, A.Watson, CALPHAD, 44(2014)54-61.
+$
+$ Anassessment of the Fe-C-Si system, J.Lacaze and B.Sundman,
+$ Metall. Mater. Trans.A 22(1991)2211?2223.
+$
+$-----------------------------------------------------------------------------
+ ELEMENT /-   ELECTRON_GAS              0.0000E+00  0.0000E+00  0.0000E+00!
+ ELEMENT VA   VACUUM                    0.0000E+00  0.0000E+00  0.0000E+00!
+ ELEMENT FE   BCC_A2                    5.5847E+01  4.4890E+03  2.7280E+01!
+ ELEMENT SI   DIAMOND                   2.8085E+01  3.2175E+03  1.8820E+01!
+
+$------------------------------------------------------------------------------
+ TYPE_DEFINITION % SEQ *!
+ DEFINE_SYSTEM_DEFAULT SPECIE 2 !
+ DEFAULT_COMMAND DEF_SYS_ELEMENT VA !
+
+$-------------------------------------------------------------------------------
+$ FUNCTIONS 
+$-----------------------------------------------------------------------------
+ FUNCTION GHSERFE    2.98140E+02  +1225.7+124.134*T-23.5143*T*LN(T)
+   -.00439752*T**2-5.8927E-08*T**3+77359*T**(-1);  1.81100E+03  Y
+   -25383.581+299.31255*T-46*T*LN(T)+2.29603E+31*T**(-9);  6000  N  !
+ FUNCTION GLIQFE     2.98140E+02  +12040.17-6.55843*T+GHSERFE 
+   -3.67516E-21*T**7;  1.81100E+03  Y
+   -10838.83+291.302*T-46*T*LN(T);  6000  N !
+ FUNCTION GFCCFE     2.98140E+02  -1462.4+8.282*T-1.15*T*LN(T)+6.4E-04*T**2
+   +GHSERFE ;  1.81100E+03  Y
+   -27098.266+300.25256*T-46*T*LN(T)+2.78854E+31*T**(-9);  6000  N  !
+ FUNCTION GHCPFE     2.98140E+02  -3705.78+12.591*T-1.15*T*LN(T)
+   +6.4E-04*T**2+GHSERFE ;  1.81100E+03  Y
+   -3957.199+5.24951*T+4.925095E+30*T**(-9)+GHSERFE ;  6000  N !
+$----------------------------------------------------------------------------
+ FUNCTION GHSERSI    298.15  -8162.609+137.236859*T-22.8317533*T*LN(T)
+   -.001912904*T**2-3.552E-09*T**3+176667*T**(-1);  1.68700E+03  Y
+   -9457.642+167.281367*T-27.196*T*LN(T)-4.20369E+30*T**(-9);
+   3.60000E+03  N !
+ FUNCTION GBCCSI 298.15 47000-22.5*T+GHSERSI;     3600 N !
+ FUNCTION GFCCSI 298.15 51000-21.8*T+GHSERSI;     3600 N !
+ FUNCTION GLIQSI 298.15 42533.751+107.13742*T-22.8317533*T*LN(T)
+   -1.912904E-3*T**2-0.003552E-6*T**3+176667*T**(-1)
+   +2.0931E-21*T**7; 1687.0 Y
+   40370.523+137.722298*T-27.196*T*LN(T); 3600.0 N !
+ FUNCTION GHCPSI 298.15 49200-20.8*T+GHSERSI; 3600.0 N !
+$----------------------------------------------------------------------------
+$ For A2 phase 
+ FUNCTION FSL0BCC 298.15  -27809+11.62*T;                 6000 N !
+ FUNCTION FSL1BCC 298.15  -11544;                         6000 N !
+ FUNCTION FSL2BCC 298.15  +3890;                          6000 N !
+ FUNCTION ETCFESI 298.15  +63;                            6000 N !
+$ For B2 phase
+ FUNCTION FESIW1  298.15  +1260*R;                        6000 N !
+
+$-------------------------------------------------------------------------------
+$ LIQUID
+$-------------------------------------------------------------------------------
+ PHASE LIQUID  %  1  1.0  !
+ CONSTITUENT LIQUID  :FE,SI :  !
+ PARAMETER G(LIQUID,SI;0)    298.15 +GLIQSI;           6000 N !
+ PARAMETER G(LIQUID,FE;0)    298.15 +GLIQFE;           6000 N !
+ PARAMETER G(LIQUID,FE,SI;0) 298.15 -144641+28.5969*T; 6000 N !
+ PARAMETER G(LIQUID,FE,SI;1) 298.15 -24950.8-5.5107*T; 6000 N !
+ PARAMETER G(LIQUID,FE,SI;2) 298.15 +30805.7-9.0087*T; 6000 N !
+ PARAMETER G(LIQUID,FE,SI;3) 298.15 +17196.1;          6000 N !
+$-------------------------------------------------------------------------------
+$ FCC_A1
+$-------------------------------------------------------------------------------
+ TYPE_DEFINITION * GES A_P_D FCC_A1 MAGNETIC  -3.0    2.80000E-01 !
+ PHASE FCC_A1  %*  2  1   1 !
+ CONSTITUENT FCC_A1  :FE%,SI : VA% :  !
+ PARAMETER G(FCC_A1,FE:VA;0)     298.15  +GFCCFE;               6000 N !
+ PARAMETER TC(FCC_A1,FE:VA;0)    298.15  -201;                  6000 N !
+ PARAMETER BMAGN(FCC_A1,FE:VA;0) 298.15  -2.1;                  6000 N !
+ PARAMETER G(FCC_A1,SI:VA;0)     298.15  +51000-21.8*T+GHSERSI; 6000 N !
+ PARAMETER G(FCC_A1,FE,SI:VA;0)  298.15  -125247.7+41.116*T;    6000 N !
+ PARAMETER G(FCC_A1,FE,SI:VA;1)  298.15  -142707.6;             6000 N !
+ PARAMETER G(FCC_A1,FE,SI:VA;2)  298.15  +89907.3;              6000 N !
+$-------------------------------------------------------------------------------
+$ BCC_A2
+$-------------------------------------------------------------------------------
+ TYPE_DEFINITION & GES A_P_D BCC_A2 MAGNETIC  -1.0    4.00000E-01 !
+ PHASE BCC_A2  %&  2 1   3 !
+ CONSTITUENT BCC_A2  :FE,SI,VA:VA:  !
+ PARAMETER G(BCC_A2,FE:VA;0)     298.15  +GHSERFE;              6000 N !
+ PARAMETER TC(BCC_A2,FE:VA;0)    298.15  +1043;                 6000 N !
+ PARAMETER BMAGN(BCC_A2,FE:VA;0) 298.15  +2.22;                 6000 N !
+ PARAMETER G(BCC_A2,VA:VA;0)     298.15  +10*R*T;               6000 N !
+ PARAMETER G(BCC_A2,FE,VA:VA;0)  298.15  +150000;               6000 N !
+ PARAMETER G(BCC_A2,SI:VA;0)     298.15  +47000-22.5*T+GHSERSI; 6000 N !
+ PARAMETER G(BCC_A2,SI,VA:VA;0)  298.15  +60000;                6000 N !
+ PARAMETER G(BCC_A2,FE,SI:VA;0)  298.15  +4*FSL0BCC-4*FESIW1;   6000 N !
+ PARAMETER G(BCC_A2,FE,SI:VA;1)  298.15  +8*FSL1BCC;            6000 N !
+ PARAMETER G(BCC_A2,FE,SI:VA;2)  298.15  +16*FSL2BCC;           6000 N !
+ PARAMETER TC(BCC_A2,FE,SI:VA;1) 298.15  +8*ETCFESI;            6000 N !
+$
+$-------------------------------------------------------------------------------
+$ BCC_B2, Split-CEF
+$-------------------------------------------------------------------------------
+ TYPE_DEFINITION ) GES A_P_D BCC_B2 DIS_PART BCC_A2,,,!
+ PHASE BCC_B2 %)  3  0.5   0.5  3 !
+ CONSTITUENT BCC_B2  :FE,SI,VA:FE,SI,VA:VA:  !
+ PARA G(BCC_B2,SI:FE:VA;0) 298.15 -2*FESIW1; 6000 N !
+ PARA G(BCC_B2,FE:SI:VA;0) 298.15 -2*FESIW1; 6000 N !
+ PARA G(BCC_B2,SI:SI:VA;0) 298.15 +0;        6000 N !
+ PARA G(BCC_B2,VA:SI:VA;0) 298.15 +0;        6000 N !
+ PARA G(BCC_B2,VA:FE:VA;0) 298.15 +0;        6000 N !
+ PARA G(BCC_B2,VA:VA:VA;0) 298.15 +0;        6000 N !
+ PARA G(BCC_B2,SI:VA:VA;0) 298.15 +0;        6000 N !
+ PARA G(BCC_B2,FE:VA:VA;0) 298.15 +0;        6000 N !
+ PARA G(BCC_B2,FE:FE:VA;0) 298.15 +0;        6000 N !
+$
+$-------------------------------------------------------------------------------
+$ FE2SI
+$-------------------------------------------------------------------------------
+ PHASE FE2SI  %  2 0.666667   0.333333 !
+ CONSTITUENT FE2SI  :FE:SI:  !
+ PARAMETER G(FE2SI,FE:SI;0)  298.15  
+   -24515.9-2.96843*T+0.666667*GHSERFE+0.333333*GHSERSI;   6000 N !
+$-------------------------------------------------------------------------------
+$ FE5SI3
+$-------------------------------------------------------------------------------
+ PHASE FE5SI3  %  2 0.625   0.375 !
+ CONSTITUENT FE5SI3  :FE:SI:  !
+ PARAMETER G(FE5SI3,FE:SI;0)  2.98150E+02  
+   -30063.6+0.2329*T+0.625*GHSERFE +0.375*GHSERSI;   6000 N   !
+$-------------------------------------------------------------------------------
+$ FESI
+$-------------------------------------------------------------------------------
+ PHASE FESI  %  2 0.5   0.5 !
+ CONSTITUENT FESI  :FE:SI:  !
+ PARAMETER G(FESI,FE:SI;0) 298.15 
+   -34902.7+0.9644*T+0.5*GHSERFE+0.5*GHSERSI; 6000 N !
+$-------------------------------------------------------------------------------
+$ FESI2_L
+$-------------------------------------------------------------------------------
+ PHASE FESI2_L  %  2 0.333333   0.666667 !
+ CONSTITUENT FESI2_L  :FE:SI:  !
+ PARAMETER G(FESI2_L,FE:SI;0)  298.15 
+   -25988.9+2.45946*T+0.333333*GHSERFE+0.666667*GHSERSI;  6000 N !
+$-------------------------------------------------------------------------------
+$ FESI2_H
+$-------------------------------------------------------------------------------
+ PHASE FESI2_H  %  2 0.3   0.7 !
+ CONSTITUENT FESI2_H  :FE:SI:  !
+ PARAMETER G(FESI2_H,FE:SI;0)  298.15  
+   -19298.2-1.14796*T+0.3*GHSERFE+0.7*GHSERSI;   6000 N !
+$-------------------------------------------------------------------------------
+$ DIAMOND
+$-------------------------------------------------------------------------------
+ PHASE DIAMOND  %  1  1.0  !
+ CONSTITUENT DIAMOND  :SI :  !
+ PARAMETER G(DIAMOND,SI;0)  298.15  +GHSERSI; 6000 N !
+
+$-------------------------------------------------------------------------------
+
