@@ -1,0 +1,150 @@
+$CAZN
+$ -----------------------------------------------------------------------------
+$ 2012.5.2
+$ 
+$ TDB file created by K.Hashimoto, T.Abe and Y.Sawada,
+$ Particle Simulation and Thermodynamics Group, National Institute for 
+$ Materials Science. 1-2-1 Sengen, Tsukuba, Ibaraki 305-0047, Japan
+$ 
+$ e-mail: abe.taichi@nims.go.jp
+$
+$ Copyright (C) NIMS 2012
+$ -----------------------------------------------------------------------------
+$
+$ The parameter set is taken from   
+$ A Computational Thermodynamic Assessment of the Ca-Zn System,
+$ C.O.Brubaker, Z.K.Liu, CALPHAD, 25 (2001) 381-390.
+$
+$------------------------------------------------------------------------------
+$              
+ ELEMENT /-   ELECTRON_GAS              0.0000E+00  0.0000E+00  0.0000E+00!
+ ELEMENT VA   VACUUM                    0.0000E+00  0.0000E+00  0.0000E+00!
+ ELEMENT CA   FCC_A1                    4.0078E+01  6.1965E+03  4.1589E+01!
+ ELEMENT ZN   HCP_A3                    6.5390E+01  5.6568E+03  4.1631E+01!
+
+$------------------------------------------------------------------------------
+ FUNCTION GFCCCA 298.15   -4955.062+72.794266*T
+    -16.3138*T*LN(T)-.01110455*T**2-133574*T**(-1);                    1115 Y
+    -107304.428+799.982066*T-114.292247*T*LN(T)+.023733814*T**2
+    -1.2438E-06*T**3+18245540*T**(-1);                                 3000 N !
+                                                                         $91Din
+
+ FUNCTION GLIQCA  298.15   +5844.846+62.4838*T
+    -16.3138*T*LN(T)-.01110455*T**2-133574*T**(-1);                     500 Y
+    +7838.856+18.2979*T-8.9874787*T*LN(T)-.02266537*T**2+3.338303E-06*T**3
+    -230193*T**(-1);                                                   1115 Y
+    -2654.938+188.9223*T-35*T*LN(T);                                   3000 N !
+                                                                         $91Din
+
+ FUNCTION GHCPCA  298.15   -4455.062+73.494266*T
+    -16.3138*T*LN(T)-.01110455*T**2-133574*T**(-1);                    1115 Y
+    -106804.428+800.682066*T-114.2922467*T*LN(T)+.023733814*T**2
+    -1.2438E-06*T**3+18245540*T**(-1);                                 3000 N !
+                                                                         $91Din
+                                                                         
+ FUNCTION GBCCCA  298.15   -7020.852+142.970155*T
+    -28.2541*T*LN(T)+.0072326*T**2-4.500217E-06*T**3+60578*T**(-1);     716 Y
+    +1640.475+1.999694*T-6.276*T*LN(T)-.0161921*T**2-523000*T**(-1);   1115 Y
+    -142331.096+1023.54905*T-143.872698*T*LN(T)+.032543127*T**2
+    -1.704079E-06*T**3+25353771*T**(-1);                               3000 N !
+                                                                         $91Din
+
+ FUNCTION GHCPZN  298.15
+    -7285.787+118.470069*T-23.701314*T*LN(T)-1.712034E-3*T**2
+    -1.264963E-6*T**3;                                               692.68 Y
+    -11070.559+172.34566*T-31.38*T*LN(T)+470.514E24*T**(-9);        1700.00 N !
+                                                                         $91Din
+
+ FUNCTION GLIQZN   298.15
+    -128.574+108.177079*T-23.701314*T*LN(T)-1.712034E-3*T**2-1.264963E-6*T**3
+    -358.958E-21*T**7;                                               692.68 Y
+    -3620.391+161.608594*T-31.38*T*LN(T);                           1700.00 N !
+                                                                         $91Din
+                                                                         
+ FUNCTION GFCCZN   298.15  +2969.82-1.56968*T+GHCPZN#;                 3000 N !
+                                                                         $91Din
+ FUNCTION GBCCZN   298.15
+    -4398.827+115.959669*T-23.701314*T*LN(T)-1.712034E-3*T**2-1.264963E-6*T**3;
+                                                                     692.68 Y
+    -8183.599+169.83526*T-31.38*T*LN(T)+470.514E24*T**(-9);         1700.00 N !
+                                                                       $1991Din
+
+$------------------------------------------------------------------------------
+ TYPE_DEFINITION % SEQ *!
+ DEFINE_SYSTEM_DEFAULT ELEMENT 2 !
+ DEFAULT_COMMAND DEF_SYS_ELEMENT VA /- !
+
+$------------------------------------------------------------------------------
+$ PARAMETERS FOR LIQUID PHASE
+$------------------------------------------------------------------------------
+ PHASE LIQUID %  1  1.0  !
+    CONSTITUENT LIQUID:L :CA,ZN :  !
+   PARAMETER G(LIQUID,CA;0)       298.15 +GLIQCA#;                     3000 N !
+   PARAMETER G(LIQUID,ZN;0)       298.15 +GLIQZN#;                     1700 N !
+   PARAMETER G(LIQUID,CA,ZN;0)    298.15 -65435+10.624*T;              6000 N !
+   PARAMETER G(LIQUID,CA,ZN;1)    298.15 +43288-12.978*T;              6000 N !
+   PARAMETER G(LIQUID,CA,ZN;2)    298.15 -49709+35.547*T;              6000 N !
+   
+$------------------------------------------------------------------------------
+$ PARAMETERS FOR HCP
+$------------------------------------------------------------------------------
+ PHASE HCP  %  2 1   .5 !
+    CONSTITUENT HCP  :CA,ZN% : VA% :  !
+   PARAMETER G(HCP,CA:VA;0)    298.15  +GHCPCA#;                       3000 N !
+   PARAMETER G(HCP,ZN:VA;0)    298.15  +GHCPZN#;                       1700 N !
+
+$------------------------------------------------------------------------------
+$ PARAMETERS FOR BCC
+$------------------------------------------------------------------------------
+ PHASE BCC  %  2 1   3 !
+    CONSTITUENT BCC  :CA,ZN : VA% :  !
+   PARAMETER G(BCC,CA:VA;0)    298.15  +GBCCCA#;                       3000 N !
+   PARAMETER G(BCC,ZN:VA;0)    298.15  +GBCCZN#;                       1700 N !
+
+$------------------------------------------------------------------------------
+$ PARAMETERS FOR FCC
+$------------------------------------------------------------------------------
+ PHASE FCC  %  2 1   1 !
+    CONSTITUENT FCC  :CA%,ZN : VA% :  !
+   PARAMETER G(FCC,CA:VA;0)  298.15  +GFCCCA#;                         3000 N !
+   PARAMETER G(FCC,ZN:VA;0)  298.15  +GFCCZN#;                         1700 N !
+
+$------------------------------------------------------------------------------
+$ PARAMETERS FOR  STOICIOMETRIC COMPOUNDS
+$------------------------------------------------------------------------------
+ PHASE CA3ZN  %  2  3  1 !
+    CONSTITUENT CA3ZN  :CA : ZN :  !
+   PARAMETER G(CA3ZN,CA:ZN;0)  298.15  -36353+0.471*T+3*GFCCCA#+GHCPZN#;
+                                                                       6000 N !
+ PHASE CA5ZN3  %  2  5  3 !
+    CONSTITUENT CA5ZN3  :CA : ZN :  !
+   PARAMETER G(CA5ZN3,CA:ZN;0)  298.15  -108144+1.251*T+5*GFCCCA#+3*GHCPZN#;
+                                                                       6000 N !
+ PHASE CAZN  %  2  1  1 !
+    CONSTITUENT CAZN  :CA : ZN :  !
+   PARAMETER G(CAZN,CA:ZN;0)  298.15  -35605+1.606*T+GFCCCA#+GHCPZN#;
+                                                                       6000 N !
+ PHASE CAZN2  %  2  1  2 !
+    CONSTITUENT CAZN2  :CA : ZN :  !
+   PARAMETER G(CAZN2,CA:ZN;0)  298.15  -65952+0.582*T+GFCCCA#+2*GHCPZN#;
+                                                                       6000 N !
+ PHASE CAZN3  %  2  1  3 !
+    CONSTITUENT CAZN3  :CA : ZN :  !
+   PARAMETER G(CAZN3,CA:ZN;0)  298.15  -83210+3.953*T+GFCCCA#+3*GHCPZN#;
+                                                                       6000 N !
+  PHASE CAZN5  %  2  1  5 !
+    CONSTITUENT CAZN5  :CA : ZN :  !
+   PARAMETER G(CAZN5,CA:ZN;0)  298.15  -118083+14.148*T+GFCCCA#+5*GHCPZN#;
+                                                                       6000 N !
+  PHASE CAZN11  %  2  1  11 !
+    CONSTITUENT CAZN11  :CA : ZN :  !
+   PARAMETER G(CAZN11,CA:ZN;0)  298.15  -210647+64.148*T+GFCCCA#+11*GHCPZN#;
+                                                                       6000 N !
+   PHASE CAZN13  %  2  1  13 !
+    CONSTITUENT CAZN13  :CA : ZN :  !
+   PARAMETER G(CAZN13,CA:ZN;0)  298.15  -209934+56.832*T+GFCCCA#+13*GHCPZN#;
+                                                                       6000 N !
+                                                              
+$CAZN
+
+
