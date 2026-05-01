@@ -174,7 +174,24 @@ print("Functions written.")
 # Use this as opportunity to understand relevant .tdb file
 
 # Mina Test Code
-db_demo = Database(retrieve_tdb("Ca-Zn_pycalphad_starter_v2_copy.tdb"))
+db_demo = Database(retrieve_tdb("CaZn2_minimal_demo_pycalphad.tdb"))
 orient_database(db_demo)
 binary_components = ["CA", "ZN", "VA"]
-plot_binary_diagram(db_demo, binary_components, "ZN", save=True) #code reads dummy vars (empty plot)
+phases = ["LIQUID", "BCC_A2", "HCP_A3", "CAZN2"]
+plot_binary_diagram(
+    db_demo,
+    binary_components,
+    "ZN",
+    x_step_range=(0, 1, 0.01),
+    temp_range=(500, 1200, 5),
+    phases=phases,
+    save=True
+) #empty plot
+from pycalphad import equilibrium
+eq = equilibrium(
+    db_demo,
+    ["CA", "ZN", "VA"],
+    ["LIQUID", "BCC_A2", "HCP_A3", "CAZN2"],
+    {v.T: 900, v.P: 101325, v.X("ZN"): 0.67}
+)
+print(eq.Phase)
