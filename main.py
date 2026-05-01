@@ -172,3 +172,9 @@ print("Functions written.")
 # Use "mmc2.TDB
 # Consult: https://www.sciencedirect.com/science/article/pii/S0364591613001065?via%3Dihub
 # Use this as opportunity to understand relevant .tdb file
+
+# Mina Test Code
+db_demo = Database(retrieve_tdb("Ca-Zn_pycalphad_starter_v2_copy.tdb"))
+orient_database(db_demo)
+binary_components = ["CA", "ZN", "VA"]
+plot_binary_diagram(db_demo, binary_components, "ZN", save=True) #code reads dummy vars (empty plot)
