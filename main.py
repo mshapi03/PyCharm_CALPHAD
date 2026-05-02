@@ -1,6 +1,6 @@
 ### CALPHAD Practice
 # Mitchell Shapiro-Albert
-# April 23, 2026
+# May 1, 2026
 
 # _________ Imports _________
 print("Beginning code...")
@@ -151,7 +151,7 @@ def plot_ternary_diagram(dbf, step_range=(0, 1, 0.05), temp=1000, phases=None, p
 print("Functions written.")
 
 # _________ Main Code _________
-# Delete all # RUN:" comments to show full capabilities!
+# Delete all "# RUN:" comments to show full capabilities!
 
 ### Use the retrieve_tdb function to read in the Al Li Zn database file
 # RUN: db_demo = Database(retrieve_tdb("Al_Cr_Ni_Dupin_2001_TDB.TDB")) # Creates a Database object
@@ -169,6 +169,27 @@ print("Functions written.")
 # RUN: plot_ternary_diagram(db_demo, temp=1500, save=True) # Current call calculates all phases at 1500
 
 # _________ Mitch's Code: Doped Refractories for EBCs _________
-# Use "mmc2.TDB
 # Consult: https://www.sciencedirect.com/science/article/pii/S0364591613001065?via%3Dihub
 # Use this as opportunity to understand relevant .tdb file
+
+# Retrieve the path to relevant database and then create a Database object out of it
+Gd_La_Zr_db_path = retrieve_tdb("mmc1.TDB")
+Gd_La_Zr_db = Database(Gd_La_Zr_db_path)
+
+# Print Database functions and contents using orient database function
+orient_database(Gd_La_Zr_db, sum_length="short")
+
+# Create a list of all the phases
+Gd_La_Zr_phases = []
+for phase in Gd_La_Zr_db.phases:
+    Gd_La_Zr_phases.append(phase)
+print(Gd_La_Zr_phases)
+
+# Create a list of components to use for binary phase diagrams and relevant T range
+Zr_La_comps = ["LA", "ZR", "O", "VA"]
+Zr_Gd_comps = ["GD", "ZR", "O", "VA"]
+refractory_temps = (500, 3500, 10)
+
+# Replicate binary phase diagrams from Fig 1 and 2 from Ref. above
+# Since I need to map the oxygen concentration, we cannot simply invoke function for alloys above
+# Figure 1 - ZrO2/Gd2O3
