@@ -10,13 +10,16 @@ from pathlib import Path
 # For graphing
 import matplotlib.pyplot as plt
 # Main package to be used
-from pycalphad import Database, binplot, ternplot
+from pycalphad import Database, binplot, ternplot, equilibrium
 import pycalphad.variables as v # Import specific submodules as needed
+from pycalphad.plot.utils import phase_legend
 # To remove distracting warning messages; see note below
 import warnings
 # To allow for timing functions/processes
 import time
 import threading
+# For math
+import numpy as np
 
 print("Imports successful.")
 
@@ -179,17 +182,38 @@ Gd_La_Zr_db = Database(Gd_La_Zr_db_path)
 # Print Database functions and contents using orient database function
 orient_database(Gd_La_Zr_db, sum_length="short")
 
-# Create a list of all the phases
-Gd_La_Zr_phases = []
-for phase in Gd_La_Zr_db.phases:
-    Gd_La_Zr_phases.append(phase)
+# Create a list of all the phases in one line
+Gd_La_Zr_phases = sorted(Gd_La_Zr_db.phases.keys())
+# Debug: Print the list to visualize it
 print(Gd_La_Zr_phases)
 
-# Create a list of components to use for binary phase diagrams and relevant T range
+# Create a list of components to use for binary phase diagrams
 Zr_La_comps = ["LA", "ZR", "O", "VA"]
 Zr_Gd_comps = ["GD", "ZR", "O", "VA"]
-refractory_temps = (500, 3500, 10)
 
 # Replicate binary phase diagrams from Fig 1 and 2 from Ref. above
-# Since I need to map the oxygen concentration, we cannot simply invoke function for alloys above
+# Since I need to map the oxygen concentration, we cannot simply invoke binplot/function for alloys above
 # Figure 1 - ZrO2/Gd2O3
+# x varies from 0 (ZrO2) to 1 (Gd2O3) in the pseudobinary
+x_GD = np.linspace(0, 0.4, 100)
+# Establish conditions to fix pressure and temperature while varying Gd
+# We use v.X('O') to set the oxygen composition, which varies between 0.60 and 0.66
+conds_GD = {v.P: 101325, v.T: 2000, v.X('GD'): x_GD, v.X('O'): 0.65, v.N: 1}
+# Run equilibrium calculation for single v.T() above
+eq_result_GD = equilibrium(Gd_La_Zr_db, Zr_Gd_comps, Gd_La_Zr_phases, conds_GD)
+# Extract unique stable phases found in the calculation
+stable_phases_GD = sorted(set(eq_result_GD.Phase.values.flatten()) - {''})
+fig_GD, ax_GD = plt.subplots(figsize=(10,6))
+phase_handles, phasemap = phase_legend(stable_phases_GD)
+for phase_name in stable_phases_GD:
+    # 'NP' is the phase fraction (moles of phase / total moles)
+    # We use .where() to select only data for the current phase
+    phase_frac = eq_result_GD.NP.where(eq_result_GD.Phase == phase_name).sum(dim='vertex')
+    ax_GD.plot(x_GD, phase_frac.squeeze(), label=phase_name, color=phasemap[phase_name], lw=2)
+ax_GD.set_title(f"Isotherm at {conds_GD[v.T]} K")
+ax_GD.set_xlabel("Mole Fraction Gd")
+ax_GD.set_ylabel("Phase Fraction (NP)")
+ax_GD.set_ylim(0, 1.1)
+ax_GD.legend(loc='best')
+plt.grid(True, alpha=0.3)
+plt.show()
