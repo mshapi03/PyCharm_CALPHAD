@@ -10,7 +10,7 @@ from pathlib import Path
 # For graphing
 import matplotlib.pyplot as plt
 # Main package to be used
-from pycalphad import Database, binplot, ternplot, equilibrium
+from pycalphad import Database, binplot, ternplot, equilibrium, calculate
 import pycalphad.variables as v # Import specific submodules as needed
 from pycalphad.plot.utils import phase_legend
 # To remove distracting warning messages; see note below
@@ -20,6 +20,7 @@ import time
 import threading
 # For math
 import numpy as np
+import xarray as xr
 
 print("Imports successful.")
 
@@ -184,36 +185,84 @@ orient_database(Gd_La_Zr_db, sum_length="short")
 
 # Create a list of all the phases in one line
 Gd_La_Zr_phases = sorted(Gd_La_Zr_db.phases.keys())
+# Remove metallic and intermetallic phases
+Gd_La_Zr_phases = [p for p in Gd_La_Zr_phases if p not in ['BCC_A2', 'FCC_A1', 'HCP_A3', 'DHCP', 'CBCC_A12', 'CUB_A13', 'LAVES_C15', 'OMEGA', 'ORTHORHOMBIC_A20']]
+# Remove gas and generic liquid (preferring IONIC_LIQ)
+Gd_La_Zr_phases = [p for p in Gd_La_Zr_phases if p not in ['GAS', 'LIQUID']]
 # Debug: Print the list to visualize it
-print(Gd_La_Zr_phases)
+# print(Gd_La_Zr_phases)
 
 # Create a list of components to use for binary phase diagrams
 Zr_La_comps = ["LA", "ZR", "O", "VA"]
 Zr_Gd_comps = ["GD", "ZR", "O", "VA"]
 
+# Debug: Stress Test
+# import time
+# # Test each phase individually to find the "Staller"
+# for p in Gd_La_Zr_phases:
+#     print(f"Testing phase: {p}...", end=" ", flush=True)
+#     start = time.time()
+#     try:
+#         # Use calculate() to evaluate just the energy of THIS phase
+#         calculate(Gd_La_Zr_db, Zr_Gd_comps, [p], T=2000, P=101325, pdens=2)
+#         print(f"Passed in {time.time()-start:.2f}s")
+#     except Exception as e:
+#         print(f"FAILED: {e}")
+
 # Replicate binary phase diagrams from Fig 1 and 2 from Ref. above
 # Since I need to map the oxygen concentration, we cannot simply invoke binplot/function for alloys above
-# Figure 1 - ZrO2/Gd2O3
-# x varies from 0 (ZrO2) to 1 (Gd2O3) in the pseudobinary
-x_GD = np.linspace(0, 0.4, 100)
-# Establish conditions to fix pressure and temperature while varying Gd
-# We use v.X('O') to set the oxygen composition, which varies between 0.60 and 0.66
-conds_GD = {v.P: 101325, v.T: 2000, v.X('GD'): x_GD, v.X('O'): 0.65, v.N: 1}
-# Run equilibrium calculation for single v.T() above
-eq_result_GD = equilibrium(Gd_La_Zr_db, Zr_Gd_comps, Gd_La_Zr_phases, conds_GD)
-# Extract unique stable phases found in the calculation
-stable_phases_GD = sorted(set(eq_result_GD.Phase.values.flatten()) - {''})
-fig_GD, ax_GD = plt.subplots(figsize=(10,6))
-phase_handles, phasemap = phase_legend(stable_phases_GD)
-for phase_name in stable_phases_GD:
-    # 'NP' is the phase fraction (moles of phase / total moles)
-    # We use .where() to select only data for the current phase
-    phase_frac = eq_result_GD.NP.where(eq_result_GD.Phase == phase_name).sum(dim='vertex')
-    ax_GD.plot(x_GD, phase_frac.squeeze(), label=phase_name, color=phasemap[phase_name], lw=2)
-ax_GD.set_title(f"Isotherm at {conds_GD[v.T]} K")
-ax_GD.set_xlabel("Mole Fraction Gd")
-ax_GD.set_ylabel("Phase Fraction (NP)")
-ax_GD.set_ylim(0, 1.1)
-ax_GD.legend(loc='best')
+
+# x varies from 0 (ZrO2) to 0.4 (approx RE2O3 limit)
+x_RE = np.linspace(0, 0.4, 100)
+eq_results = []
+
+print("Running point-by-point equilibrium with MU(O) buffer...")
+for conc_RE in x_RE:
+    # Use v.MU('O') instead of v.X('O') to avoid strict stoichiometry stalls
+    conds_RE = {
+        v.P: 101325,
+        v.T: 2000,
+        v.X('GD'): conc_RE,
+        v.MU('O'): -200000,  # Buffer oxygen chemical potential
+        v.N: 1
+    }
+
+    # Running calculation
+    eq_result = equilibrium(Gd_La_Zr_db, Zr_Gd_comps, Gd_La_Zr_phases, conds_RE, calc_opts={'pdens': 20})
+    eq_results.append(eq_result)
+
+# Combine results
+plot_results = xr.concat(eq_results, dim="X_GD", join="outer")
+plot_results.coords['X_GD'] = x_RE
+print(f"Calculated X(O) at first point: {plot_results.X.sel(component='O').values.flatten()[0]}")
+
+# Extract and clean stable phases
+stable_phases = np.unique(plot_results.Phase.values.astype(str))
+print("Found phases:", stable_phases)
+stable_phases = [p for p in stable_phases if p not in ['', 'nan', 'None']]
+
+# Plotting
+fig, ax = plt.subplots(figsize=(10, 6))
+phase_handles, phasemap = phase_legend(stable_phases)
+
+for phase_name in stable_phases:
+    # 1. Filter and sum phase fractions (NP)
+    data = plot_results.NP.where(plot_results.Phase == phase_name).sum(dim='vertex').fillna(0)
+
+    # 2. Collapse all dimensions of size 1 (P, T, etc.)
+    # This turns (1, 1, 100) into (100,)
+    y_values = data.values.squeeze()
+
+    # 3. Double check that we have a 1D array to match x_RE
+    if y_values.ndim == 0:  # Handles cases where only one point exists
+        y_values = [y_values]
+
+    ax.plot(x_RE, y_values, label=phase_name, color=phasemap[phase_name], lw=2)
+
+ax.set_title(f"Isotherm at 2000 K (MU(O) = -200 kJ/mol)")
+ax.set_xlabel("Mole Fraction Gd")
+ax.set_ylabel("Phase Fraction (NP)")
+ax.set_ylim(0, 1.1)
+ax.legend(loc='best')
 plt.grid(True, alpha=0.3)
 plt.show()
