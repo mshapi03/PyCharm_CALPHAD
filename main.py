@@ -214,55 +214,90 @@ Zr_Gd_comps = ["GD", "ZR", "O", "VA"]
 
 # x varies from 0 (ZrO2) to 0.4 (approx RE2O3 limit)
 x_RE = np.linspace(0, 0.4, 100)
-eq_results = []
+# Linearly adjust the MU value to track the theoretical join more accurately
+# Start at -200kJ (good for ZrO2) and end slightly higher (-100kJ) to keep RE-oxides stable
+mu_vals = np.linspace(-200000, -100000, len(x_RE))
+eq_results_list = []
+x_O_list = []
+valid_x_RE = []
 
 print("Running point-by-point equilibrium with MU(O) buffer...")
-for conc_RE in x_RE:
-    # Use v.MU('O') instead of v.X('O') to avoid strict stoichiometry stalls
-    conds_RE = {
-        v.P: 101325,
-        v.T: 2000,
-        v.X('GD'): conc_RE,
-        v.MU('O'): -200000,  # Buffer oxygen chemical potential
-        v.N: 1
-    }
-
+for i, x in enumerate(x_RE):
+    # Use v.MU('O') as chemical potential instead of v.X('O') to avoid strict stoichiometry stalls
+    conds_RE = {v.P: 101325, v.T: 2000, v.X('GD'): x, v.MU('O'): mu_vals[i], v.N: 1}
     # Running calculation
     eq_result = equilibrium(Gd_La_Zr_db, Zr_Gd_comps, Gd_La_Zr_phases, conds_RE, calc_opts={'pdens': 20})
-    eq_results.append(eq_result)
 
-# Combine results
-plot_results = xr.concat(eq_results, dim="X_GD", join="outer")
-plot_results.coords['X_GD'] = x_RE
-print(f"Calculated X(O) at first point: {plot_results.X.sel(component='O').values.flatten()[0]}")
+    # Extract the Oxygen fraction for this specific point
+    # .item() gets the raw number, and we check if it converged
+    o_frac = eq_result.X.sel(component='O').values.flatten()[0]
+
+    if not np.isnan(o_frac):
+        eq_results_list.append(eq_result)
+        x_O_list.append(o_frac)
+        valid_x_RE.append(x)
+
+    # Debug: print running to ensure no stall
+    print("Running...")
+
+# Convert to numpy for plotting
+x_O_final = np.array(x_O_list)
+x_RE_final = np.array(valid_x_RE)
+
+# Display feasibility test - should show O composition moving from 0.666 to 0.60 over range; if not, the results displayed are likely not sound
+
+# Print first and last values to check against 0.666 and 0.60
+print(f"Calculated X(O) at first point (Pure ZrO2): {float(x_O_final[0]):.4f}")
+print(f"Calculated X(O) at last point (RE-rich):   {float(x_O_final[-1]):.4f}")
+# Create the feasibility graph
+plt.figure(figsize=(8, 5))
+plt.plot(x_RE_final, x_O_final, color='darkred', lw=2, label='Calculated Stoichiometry')
+# Add a reference line for the theoretical join if you want to see the "drift"
+theoretical_join = (2 - 0.5 * x_RE_final) / (3 - 0.5 * x_RE_final)
+plt.plot(x_RE, theoretical_join, 'k--', alpha=0.5, label='Theoretical Oxide Join')
+# Matplotlib formatting
+plt.xlabel('Mole Fraction RE')
+plt.ylabel('Mole Fraction Oxygen')
+plt.title('Stoichiometry Feasibility Test: ZrO2 - RE2O3 Join')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.show()
+
+# Move onto generating the isotherm now - merge all successful point calculations into one Dataset
+plot_results = xr.concat(eq_results_list, dim="X_GD")
+plot_results.coords['X_GD'] = valid_x_RE
 
 # Extract and clean stable phases
 stable_phases = np.unique(plot_results.Phase.values.astype(str))
-print("Found phases:", stable_phases)
 stable_phases = [p for p in stable_phases if p not in ['', 'nan', 'None']]
+# Debug: Print found phases
+# print("Found phases:", stable_phases)
+# stable_phases = [p for p in stable_phases if p not in ['', 'nan', 'None']]
 
-# Plotting
+# Create isotherm object
 fig, ax = plt.subplots(figsize=(10, 6))
 phase_handles, phasemap = phase_legend(stable_phases)
 
 for phase_name in stable_phases:
-    # 1. Filter and sum phase fractions (NP)
+    # Filter and sum phase fractions (NP)
     data = plot_results.NP.where(plot_results.Phase == phase_name).sum(dim='vertex').fillna(0)
-
-    # 2. Collapse all dimensions of size 1 (P, T, etc.)
-    # This turns (1, 1, 100) into (100,)
+    # Collapse all dimensions of size 1 (P, T, etc.)
     y_values = data.values.squeeze()
-
-    # 3. Double check that we have a 1D array to match x_RE
+    # Double check that we have a 1D array to match x_RE
     if y_values.ndim == 0:  # Handles cases where only one point exists
         y_values = [y_values]
+    ax.plot(valid_x_RE, y_values, label=phase_name, color=phasemap[phase_name], lw=2)
 
-    ax.plot(x_RE, y_values, label=phase_name, color=phasemap[phase_name], lw=2)
-
-ax.set_title(f"Isotherm at 2000 K (MU(O) = -200 kJ/mol)")
+# Matplotlib formatting
+ax.set_title(f"Isotherm at 2000 K")
 ax.set_xlabel("Mole Fraction Gd")
 ax.set_ylabel("Phase Fraction (NP)")
 ax.set_ylim(0, 1.1)
-ax.legend(loc='best')
+# Clean legend
+handles, labels = ax.get_legend_handles_labels()
+by_label = dict(zip(labels, handles))
+ax.legend(by_label.values(), by_label.keys(), loc='upper left', bbox_to_anchor=(1, 1))
+# Show
+plt.tight_layout()
 plt.grid(True, alpha=0.3)
 plt.show()
