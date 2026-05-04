@@ -177,11 +177,13 @@ print("Functions written.")
 db_demo = Database(retrieve_tdb("cazn_bru.tdb"))
 orient_database(db_demo)
 binary_components = ["CA", "ZN", "VA"]
+phases = ["LIQUID", "BCC", "FCC", "HCP", "CA3ZN", "CA5ZN3", "CAZN", "CAZN2", "CAZN3", "CAZN5", "CAZN11", "CAZN13"]
 plot_binary_diagram(
     db_demo,
     binary_components,
     "ZN",
-    x_step_range=(0, 1, 0.01),
-    temp_range=(500, 1200, 5),
+    x_step_range=(0, 1, 0.005),
+    temp_range=(500, 1200, 1),
+    phases=phases,
     save=True
 )
