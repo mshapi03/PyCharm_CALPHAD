@@ -189,7 +189,7 @@ Gd_La_Zr_phases = [p for p in Gd_La_Zr_phases if p not in ['BCC_A2', 'FCC_A1', '
 # Remove gas and generic liquid (preferring IONIC_LIQ)
 Gd_La_Zr_phases = [p for p in Gd_La_Zr_phases if p not in ['GAS', 'LIQUID']]
 # Debug: Print the list to visualize it
-print(Gd_La_Zr_phases)
+# print(Gd_La_Zr_phases)
 
 # Create a list of components to use for isotherms
 Zr_La_comps = ["LA", "ZR", "O", "VA"]
@@ -229,9 +229,10 @@ valid_x_RE = []
 print("Running point-by-point equilibrium with MU(O) buffer...")
 for i, x in enumerate(x_RE):
     # Use v.MU('O') as chemical potential instead of v.X('O') to avoid strict stoichiometry stalls
-    conds_RE = {v.P: 101325, v.T: 2000, v.X('GD'): x, v.MU('O'): mu_vals[i], v.N: 1}
-    # Running calculation
-    eq_result = equilibrium(Gd_La_Zr_db, Zr_Gd_comps, Gd_La_Zr_phases, conds_RE, calc_opts={'pdens': 20})
+    conds_RE = {v.P: 101325, v.T: 2300, v.X('GD'): x, v.MU('O'): mu_vals[i], v.N: 1}
+    # Running calculation; pdens controls the density of the starting grid for the energy minimizer, tol restricts tolerance
+    eq_result = equilibrium(Gd_La_Zr_db, Zr_Gd_comps, Gd_La_Zr_phases, conds_RE,
+                                calc_opts={'pdens': 20})
     # Extract the oxygen fraction for this specific point -  .item() gets the raw number
     o_frac = eq_result.X.sel(component='O').values.flatten()[0]
     # Check if the specific oxygen fraction resulted in a converged (real) solution (not "nan")
@@ -274,7 +275,7 @@ plt.show()
 # Generate the isotherm - merge all successful point calculations into one Dataset
 # Note here that this uses xarray rather than prev. numpy arrays
 # Owing to legacy code, and making sure that points get mapped in the final graphs properly
-plot_results = xr.concat(eq_results_list, dim="X_GD")
+plot_results = xr.concat(eq_results_list, dim="X_GD", join="override")
 plot_results.coords['X_GD'] = valid_x_RE
 
 # Extract and clean stable phases using custom pycalphad class attributes
@@ -301,7 +302,7 @@ for phase_name in stable_phases:
     ax.plot(valid_x_RE, y_values, label=phase_name, color=phasemap[phase_name], lw=2)
 
 # Matplotlib formatting
-ax.set_title(f"Isotherm at 2000 K")
+ax.set_title(f"Isotherm at 2300 K")
 ax.set_xlabel("Mole Fraction Gd")
 ax.set_ylabel("Phase Fraction (NP)")
 ax.set_ylim(0, 1.1)
