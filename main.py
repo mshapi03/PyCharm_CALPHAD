@@ -1,6 +1,6 @@
 ### CALPHAD Practice
 # Mitchell Shapiro-Albert
-# May 1, 2026
+# May 4, 2026
 
 # _________ Imports _________
 print("Beginning code...")
@@ -191,15 +191,26 @@ Gd_La_Zr_phases = [p for p in Gd_La_Zr_phases if p not in ['GAS', 'LIQUID']]
 # Debug: Print the list to visualize it
 # print(Gd_La_Zr_phases)
 
-# Create a list of components to use for isotherms
-Zr_La_comps = ["LA", "ZR", "O", "VA"]
-Zr_Gd_comps = ["GD", "ZR", "O", "VA"]
-
 # Set conditions of interest:
-cation = None # Set dopant to either "GD" or "LA" depending on system of interest
-temp = None # Set temperature to generate isotherm at
+cation = "LA" # Set dopant to either "GD" or "LA" depending on system of interest
+temp = 2100 # Set temperature to generate isotherm at (500-3000 or 3500 C)
 
-# Debug: Stress Test
+# Rudimentary temperature range error handling
+if temp > 3500 or temp < 500:
+    raise ValueError(f"Temperature range '{temp}'ºC not compatible. Please enter a value between 500 and 3500ºC")
+
+# Create a list of components to use for isotherms and rudimentary error handling
+if cation == "GD":
+    species_tbc = ["GD", "ZR", "O", "VA"]
+elif cation == "LA":
+    species_tbc = ["LA", "ZR", "O", "VA"]
+else:
+    raise ValueError(f"Rare earth cation '{cation}' not compatible. Please choose 'GD' or 'LA'.")
+
+# Legacy - Zr_La_comps = ["LA", "ZR", "O", "VA"]
+# Legacy - Zr_Gd_comps = ["GD", "ZR", "O", "VA"]
+
+# Debug: Find problematic phases depending on sorting conditions
 # import time
 # # Test each phase individually at an arbitrary point to find any that take too much computational power
 # for p in Gd_La_Zr_phases:
@@ -207,7 +218,7 @@ temp = None # Set temperature to generate isotherm at
 #     start = time.time()
 #     try:
 #         # Use calculate() to evaluate just the energy of THIS phase
-#         calculate(Gd_La_Zr_db, Zr_Gd_comps, [p], T=2000, P=101325, pdens=2)
+#         calculate(Gd_La_Zr_db, species_tbc, [p], T=temp, P=101325, pdens=2)
 #         print(f"Passed in {time.time()-start:.2f}s")
 #     except Exception as e:
 #         print(f"FAILED: {e}")
@@ -217,7 +228,7 @@ temp = None # Set temperature to generate isotherm at
 
 # x varies from 0 (ZrO2) to 0.4 (approx RE2O3 limit)
 x_RE = np.linspace(0, 0.4, 100)
-# Linearly adjust the chemical potential of oxygen (MU) value to track the join between ZrO2 - Gd2O3 more accurately
+# Linearly adjust the chemical potential of oxygen (MU) value to track the join between ZrO2 - RE2O3 more accurately
 # Start at -200kJ (good for ZrO2) and end slightly higher (-100kJ) to keep RE-oxides stable
 mu_vals = np.linspace(-200000, -100000, len(x_RE))
 # Initialize a bunch of lists to be populated by solver functions below
@@ -229,9 +240,9 @@ valid_x_RE = []
 print("Running point-by-point equilibrium with MU(O) buffer...")
 for i, x in enumerate(x_RE):
     # Use v.MU('O') as chemical potential instead of v.X('O') to avoid strict stoichiometry stalls
-    conds_RE = {v.P: 101325, v.T: 2300, v.X('GD'): x, v.MU('O'): mu_vals[i], v.N: 1}
+    conds_RE = {v.P: 101325, v.T: temp, v.X(cation): x, v.MU('O'): mu_vals[i], v.N: 1}
     # Running calculation; pdens controls the density of the starting grid for the energy minimizer, tol restricts tolerance
-    eq_result = equilibrium(Gd_La_Zr_db, Zr_Gd_comps, Gd_La_Zr_phases, conds_RE,
+    eq_result = equilibrium(Gd_La_Zr_db, species_tbc, Gd_La_Zr_phases, conds_RE,
                                 calc_opts={'pdens': 20})
     # Extract the oxygen fraction for this specific point -  .item() gets the raw number
     o_frac = eq_result.X.sel(component='O').values.flatten()[0]
@@ -242,7 +253,7 @@ for i, x in enumerate(x_RE):
         x_O_list.append(o_frac)
         valid_x_RE.append(x)
     # Debug: print running to visually indicate code progress
-    print("Running...")
+    # print("Running...")
 
 # Convert the oxygen and RE atom concentrations to numpy for plotting
 x_O_final = np.array(x_O_list)
@@ -275,15 +286,14 @@ plt.show()
 # Generate the isotherm - merge all successful point calculations into one Dataset
 # Note here that this uses xarray rather than prev. numpy arrays
 # Owing to legacy code, and making sure that points get mapped in the final graphs properly
-plot_results = xr.concat(eq_results_list, dim="X_GD", join="override")
-plot_results.coords['X_GD'] = valid_x_RE
+plot_results = xr.concat(eq_results_list, dim=f"X_{cation}", join="override")
+plot_results.coords[f"X_{cation}"] = valid_x_RE
 
 # Extract and clean stable phases using custom pycalphad class attributes
 stable_phases = np.unique(plot_results.Phase.values.astype(str))
 stable_phases = [p for p in stable_phases if p not in ['', 'nan', 'None']]
 # Debug: Print found phases
 # print("Found phases:", stable_phases)
-# stable_phases = [p for p in stable_phases if p not in ['', 'nan', 'None']]
 
 # Create isotherm object and map phases to their legend entries
 fig, ax = plt.subplots(figsize=(10, 6))
@@ -302,8 +312,8 @@ for phase_name in stable_phases:
     ax.plot(valid_x_RE, y_values, label=phase_name, color=phasemap[phase_name], lw=2)
 
 # Matplotlib formatting
-ax.set_title(f"Isotherm at 2300 K")
-ax.set_xlabel("Mole Fraction Gd")
+ax.set_title(f"Isotherm at {temp}ºC")
+ax.set_xlabel(f"Mole Fraction {cation}")
 ax.set_ylabel("Phase Fraction (NP)")
 ax.set_ylim(0, 1.1)
 # Clean legend using prev. established handles and map
