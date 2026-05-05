@@ -174,7 +174,6 @@ print("Functions written.")
 
 # _________ Mitch's Code: Doped Refractories for EBCs _________
 # Consult: https://www.sciencedirect.com/science/article/pii/S0364591613001065?via%3Dihub
-# Use this as opportunity to understand relevant .tdb file
 
 # Retrieve the path to relevant database and then create a Database object out of it
 Gd_La_Zr_db_path = retrieve_tdb("mmc1.TDB")
@@ -190,15 +189,19 @@ Gd_La_Zr_phases = [p for p in Gd_La_Zr_phases if p not in ['BCC_A2', 'FCC_A1', '
 # Remove gas and generic liquid (preferring IONIC_LIQ)
 Gd_La_Zr_phases = [p for p in Gd_La_Zr_phases if p not in ['GAS', 'LIQUID']]
 # Debug: Print the list to visualize it
-# print(Gd_La_Zr_phases)
+print(Gd_La_Zr_phases)
 
-# Create a list of components to use for binary phase diagrams
+# Create a list of components to use for isotherms
 Zr_La_comps = ["LA", "ZR", "O", "VA"]
 Zr_Gd_comps = ["GD", "ZR", "O", "VA"]
 
+# Set conditions of interest:
+cation = None # Set dopant to either "GD" or "LA" depending on system of interest
+temp = None # Set temperature to generate isotherm at
+
 # Debug: Stress Test
 # import time
-# # Test each phase individually to find the "Staller"
+# # Test each phase individually at an arbitrary point to find any that take too much computational power
 # for p in Gd_La_Zr_phases:
 #     print(f"Testing phase: {p}...", end=" ", flush=True)
 #     start = time.time()
@@ -209,51 +212,53 @@ Zr_Gd_comps = ["GD", "ZR", "O", "VA"]
 #     except Exception as e:
 #         print(f"FAILED: {e}")
 
-# Replicate binary phase diagrams from Fig 1 and 2 from Ref. above
 # Since I need to map the oxygen concentration, we cannot simply invoke binplot/function for alloys above
+# Use a restrained varying chemical potential of oxygen instead of a fixed stoichiometry to avoid solver stalls
 
 # x varies from 0 (ZrO2) to 0.4 (approx RE2O3 limit)
 x_RE = np.linspace(0, 0.4, 100)
-# Linearly adjust the MU value to track the theoretical join more accurately
+# Linearly adjust the chemical potential of oxygen (MU) value to track the join between ZrO2 - Gd2O3 more accurately
 # Start at -200kJ (good for ZrO2) and end slightly higher (-100kJ) to keep RE-oxides stable
 mu_vals = np.linspace(-200000, -100000, len(x_RE))
+# Initialize a bunch of lists to be populated by solver functions below
 eq_results_list = []
 x_O_list = []
 valid_x_RE = []
 
+# Begin running equilibrium calculations
 print("Running point-by-point equilibrium with MU(O) buffer...")
 for i, x in enumerate(x_RE):
     # Use v.MU('O') as chemical potential instead of v.X('O') to avoid strict stoichiometry stalls
     conds_RE = {v.P: 101325, v.T: 2000, v.X('GD'): x, v.MU('O'): mu_vals[i], v.N: 1}
     # Running calculation
     eq_result = equilibrium(Gd_La_Zr_db, Zr_Gd_comps, Gd_La_Zr_phases, conds_RE, calc_opts={'pdens': 20})
-
-    # Extract the Oxygen fraction for this specific point
-    # .item() gets the raw number, and we check if it converged
+    # Extract the oxygen fraction for this specific point -  .item() gets the raw number
     o_frac = eq_result.X.sel(component='O').values.flatten()[0]
-
+    # Check if the specific oxygen fraction resulted in a converged (real) solution (not "nan")
     if not np.isnan(o_frac):
+        # Populate the equilibrium phases, valid oxygen concentration, and valid RE concentration to prev. established lists
         eq_results_list.append(eq_result)
         x_O_list.append(o_frac)
         valid_x_RE.append(x)
-
-    # Debug: print running to ensure no stall
+    # Debug: print running to visually indicate code progress
     print("Running...")
 
-# Convert to numpy for plotting
+# Convert the oxygen and RE atom concentrations to numpy for plotting
 x_O_final = np.array(x_O_list)
 x_RE_final = np.array(valid_x_RE)
 
-# Display feasibility test - should show O composition moving from 0.666 to 0.60 over range; if not, the results displayed are likely not sound
+# Display feasibility test - should show O composition moving from 0.666 to 0.60 over range
+# If not, the results displayed are likely not sound
 
 # Print first and last values to check against 0.666 and 0.60
 print(f"Calculated X(O) at first point (Pure ZrO2): {float(x_O_final[0]):.4f}")
 print(f"Calculated X(O) at last point (RE-rich):   {float(x_O_final[-1]):.4f}")
-# Create the feasibility graph
+# Now create the continuous feasibility graph - matplotlib object initialization
 plt.figure(figsize=(8, 5))
+# Plot the solver results using numpy arrays above
 plt.plot(x_RE_final, x_O_final, color='darkred', lw=2, label='Calculated Stoichiometry')
-# Add a reference line for the theoretical join if you want to see the "drift"
-theoretical_join = (2 - 0.5 * x_RE_final) / (3 - 0.5 * x_RE_final)
+# Add a reference line for the theoretical join (i.e. linear stoichiometry) to see the "drift"
+theoretical_join = (2 - 0.5 * x_RE_final) / (3)
 plt.plot(x_RE, theoretical_join, 'k--', alpha=0.5, label='Theoretical Oxide Join')
 # Matplotlib formatting
 plt.xlabel('Mole Fraction RE')
@@ -263,29 +268,36 @@ plt.legend()
 plt.grid(True, alpha=0.3)
 plt.show()
 
-# Move onto generating the isotherm now - merge all successful point calculations into one Dataset
+# Note: Plateaus exist in two phase regions because we're shifting the relative amounts of two stable phases
+# These aren't too concerning in their own right, but should snap back quickly; otherwise solver is choosing poor MU
+
+# Generate the isotherm - merge all successful point calculations into one Dataset
+# Note here that this uses xarray rather than prev. numpy arrays
+# Owing to legacy code, and making sure that points get mapped in the final graphs properly
 plot_results = xr.concat(eq_results_list, dim="X_GD")
 plot_results.coords['X_GD'] = valid_x_RE
 
-# Extract and clean stable phases
+# Extract and clean stable phases using custom pycalphad class attributes
 stable_phases = np.unique(plot_results.Phase.values.astype(str))
 stable_phases = [p for p in stable_phases if p not in ['', 'nan', 'None']]
 # Debug: Print found phases
 # print("Found phases:", stable_phases)
 # stable_phases = [p for p in stable_phases if p not in ['', 'nan', 'None']]
 
-# Create isotherm object
+# Create isotherm object and map phases to their legend entries
 fig, ax = plt.subplots(figsize=(10, 6))
 phase_handles, phasemap = phase_legend(stable_phases)
 
+# Clean and sum phases fractions
 for phase_name in stable_phases:
     # Filter and sum phase fractions (NP)
     data = plot_results.NP.where(plot_results.Phase == phase_name).sum(dim='vertex').fillna(0)
-    # Collapse all dimensions of size 1 (P, T, etc.)
+    # Collapse all dimensions of size 1 (P, T, etc.)) - effectively ignore data that isn't phase fractions
     y_values = data.values.squeeze()
     # Double check that we have a 1D array to match x_RE
     if y_values.ndim == 0:  # Handles cases where only one point exists
         y_values = [y_values]
+    # Now actually plot the clean result
     ax.plot(valid_x_RE, y_values, label=phase_name, color=phasemap[phase_name], lw=2)
 
 # Matplotlib formatting
@@ -293,11 +305,11 @@ ax.set_title(f"Isotherm at 2000 K")
 ax.set_xlabel("Mole Fraction Gd")
 ax.set_ylabel("Phase Fraction (NP)")
 ax.set_ylim(0, 1.1)
-# Clean legend
+# Clean legend using prev. established handles and map
 handles, labels = ax.get_legend_handles_labels()
 by_label = dict(zip(labels, handles))
 ax.legend(by_label.values(), by_label.keys(), loc='upper left', bbox_to_anchor=(1, 1))
-# Show
+# Finally display the graph!
 plt.tight_layout()
 plt.grid(True, alpha=0.3)
 plt.show()
